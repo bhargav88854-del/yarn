@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# YarnTrack — Yarn Inventory Management System
 
-## Getting Started
+Warehouse system for tracking yarn / thread stock: inventory by rack, stock
+movements in and out, low-stock alerts, and monthly usage reports.
 
-First, run the development server:
+## Stack
+
+- Next.js 14 (App Router, TypeScript)
+- Prisma ORM + SQLite (dev) — swap to PostgreSQL/Supabase for production
+- Tailwind CSS + Radix UI primitives
+- Recharts for reporting
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env          # SQLite, zero-config
+npx prisma migrate dev        # create the database
+npm run seed                  # load sample yarns + movements
+npm run dev                   # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Routes
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Path | Purpose |
+|---|---|
+| `/` | Landing page |
+| `/dashboard` | KPI cards, recent yarns, low-stock alerts |
+| `/inventory` | Searchable/filterable yarn table, add/edit/delete, stock in/out |
+| `/inventory/[id]` | Yarn detail + edit + movement history |
+| `/transactions` | Stock movement log (IN/OUT) |
+| `/reports` | Low-stock report + monthly usage chart |
+| `/storage` | Rack layout grouped by rack prefix |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## API
 
-## Learn More
+`/api/yarns`, `/api/yarns/[id]`, `/api/transactions`, `/api/reports` — JSON
+route handlers, Zod-validated, stock movements run in a Prisma transaction.
 
-To learn more about Next.js, take a look at the following resources:
+## Conventions
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Yarn IDs: `Y001`, `Y002`, …
+- Locations: `Rack A-12`
+- Unit: cones · Low-stock threshold: `< 50`
+- Low-stock badge: red `< 50`, amber `< 100`, green otherwise

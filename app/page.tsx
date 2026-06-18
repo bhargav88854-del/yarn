@@ -1,101 +1,117 @@
-import Image from "next/image";
+import Link from "next/link";
+import { prisma } from "@/lib/prisma";
+import { LOW_STOCK_THRESHOLD, rackGroup } from "@/lib/utils";
+import { LandingSearch } from "@/components/landing-search";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+const NAV = [
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/inventory", label: "Inventory" },
+  { href: "/transactions", label: "Transactions" },
+  { href: "/reports", label: "Reports" },
+  { href: "/storage", label: "Storage" },
+];
+
+export default async function LandingPage() {
+  const [agg, skuCount, lowCount, yarns] = await Promise.all([
+    prisma.yarn.aggregate({ _sum: { quantity: true } }),
+    prisma.yarn.count(),
+    prisma.yarn.count({ where: { quantity: { lt: LOW_STOCK_THRESHOLD } } }),
+    prisma.yarn.findMany({ select: { location: true } }),
+  ]);
+  const totalCones = agg._sum.quantity ?? 0;
+  const rackCount = new Set(yarns.map((y) => rackGroup(y.location))).size;
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className="relative min-h-screen overflow-hidden bg-[#1b1448] text-white">
+      {/* cosmic backdrop */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_15%,rgba(124,77,255,0.45),transparent_55%),radial-gradient(ellipse_at_80%_85%,rgba(255,141,84,0.40),transparent_55%),radial-gradient(circle_at_60%_45%,rgba(64,42,140,0.55),transparent_60%)]" />
+      <div className="pointer-events-none absolute inset-0 [background-image:radial-gradient(rgba(255,255,255,0.5)_1px,transparent_1px)] [background-size:40px_40px] opacity-[0.12]" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#120d33] to-transparent" />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col px-6">
+        {/* nav */}
+        <header className="flex items-center justify-between py-6">
+          <Link href="/" className="flex items-center gap-2">
+            <span className="text-2xl">🧵</span>
+            <span className="text-lg font-semibold tracking-tight">YarnTrack</span>
+          </Link>
+          <nav className="hidden items-center gap-7 text-sm text-white/80 md:flex">
+            {NAV.map((n) => (
+              <Link
+                key={n.href}
+                href={n.href}
+                className="transition-colors hover:text-white"
+              >
+                {n.label}
+              </Link>
+            ))}
+          </nav>
+          <Link
+            href="/dashboard"
+            className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium ring-1 ring-white/20 backdrop-blur transition-colors hover:bg-white/20"
           >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+            Open app
+          </Link>
+        </header>
+
+        {/* hero */}
+        <main className="flex flex-1 flex-col justify-center pb-24 pt-10">
+          <div className="max-w-2xl">
+            <h1 className="text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl md:text-7xl">
+              Every cone,
+              <br />
+              accounted for.
+            </h1>
+
+            <div className="mt-5 flex items-center gap-6 text-sm">
+              <span className="flex items-center gap-2">
+                <span className="font-semibold text-emerald-300">live</span>
+                <span className="text-white/70">{totalCones.toLocaleString()} cones 🧶</span>
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="font-semibold text-amber-300">racks</span>
+                <span className="text-white/70">{rackCount} zones 📦</span>
+              </span>
+            </div>
+
+            <p className="mt-6 max-w-xl text-base leading-7 text-white/75">
+              YarnTrack is the warehouse system for your yarn and thread stock.
+              Track inventory by rack, log every movement in and out, and catch
+              low stock before it stops a production run.
+            </p>
+
+            <div className="mt-9 max-w-xl">
+              <LandingSearch />
+            </div>
+
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                href="/dashboard"
+                className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#1b1448] transition-transform hover:-translate-y-0.5"
+              >
+                Open Dashboard
+              </Link>
+              <Link
+                href="/inventory"
+                className="rounded-full px-6 py-3 text-sm font-semibold text-white ring-1 ring-white/30 transition-colors hover:bg-white/10"
+              >
+                Browse Inventory
+              </Link>
+            </div>
+          </div>
+        </main>
+
+        {/* footer strip */}
+        <footer className="relative mb-8 ml-auto max-w-md rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm text-white/70 backdrop-blur">
+          {skuCount} yarn types tracked · {lowCount} low on stock. Jump to{" "}
+          <Link href="/reports" className="font-medium text-white hover:underline">
+            Reports
+          </Link>{" "}
+          for the full picture.
+        </footer>
+      </div>
     </div>
   );
 }

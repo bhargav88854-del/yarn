@@ -1,0 +1,36 @@
+// Yarn Inventory — Prisma schema
+// Dev uses SQLite for zero-config local runs. For production (Supabase),
+// switch `provider` to "postgresql" and point DATABASE_URL/DIRECT_URL at Postgres.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Yarn {
+  id           Int           @id @default(autoincrement())
+  yarnId       String        @unique // Y001, Y002...
+  name         String
+  material     String
+  color        String
+  quantity     Int
+  location     String // Rack A-12
+  supplier     String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions Transaction[]
+}
+
+model Transaction {
+  id       Int      @id @default(autoincrement())
+  yarnId   Int
+  type     String // IN or OUT
+  quantity Int
+  date     DateTime @default(now())
+  yarn     Yarn     @relation(fields: [yarnId], references: [id])
+}
