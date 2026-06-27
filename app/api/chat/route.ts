@@ -80,28 +80,50 @@ export async function POST(req: NextRequest) {
 
     const contents = [...mapped, { role: "user", parts: [{ text: message }] }];
 
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemText }] },
-          contents,
-          generationConfig: { temperature: 0.3, maxOutputTokens: 600 },
-        }),
-      }
-    );
+    const payload = JSON.stringify({
+      systemInstruction: { parts: [{ text: systemText }] },
+      contents,
+      generationConfig: {
+        temperature: 0.3,
+        // 2.5 models "think" and can burn the whole budget reasoning, leaving
+        // a truncated answer (finishReason MAX_TOKENS). Disable thinking and
+        // give a generous answer budget.
+        maxOutputTokens: 1024,
+        thinkingConfig: { thinkingBudget: 0 },
+      },
+    });
 
-    if (!res.ok) {
-      const detail = await res.text();
-      console.error("Gemini error", res.status, detail.slice(0, 300));
-      if (res.status === 429) {
+    // Retry transient overloads (Google returns 503/500 when the model is busy).
+    let res: Response | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+        }
+      );
+      if (res.ok || (res.status !== 503 && res.status !== 500)) break;
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+    }
+
+    if (!res || !res.ok) {
+      const status = res?.status ?? 0;
+      const detail = res ? await res.text() : "";
+      console.error("Gemini error", status, detail.slice(0, 300));
+      if (status === 429) {
         return NextResponse.json(
           {
             error: `Gemini quota exceeded for model "${MODEL}". Try again later, set GEMINI_MODEL to a model your key has quota for, or enable billing.`,
           },
           { status: 429 }
+        );
+      }
+      if (status === 503 || status === 500) {
+        return NextResponse.json(
+          { error: "Gemini is busy right now — please try again in a moment." },
+          { status: 503 }
         );
       }
       return NextResponse.json(
