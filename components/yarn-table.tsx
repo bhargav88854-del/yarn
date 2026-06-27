@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -55,83 +55,117 @@ export type Yarn = {
 };
 
 const ALL = "__all__";
-const PAGE_SIZE = 10;
-type SortKey = "name" | "quantity";
+type SortKey = "name" | "quantity" | "yarnId";
+
+type Filters = {
+  q: string;
+  material: string;
+  color: string;
+  location: string;
+  sort: SortKey;
+  dir: "asc" | "desc";
+};
 
 export function YarnTable({
   yarns,
   materials,
-  initialSearch = "",
+  canManage = false,
+  total,
+  page,
+  pageSize,
+  pageCount,
+  filters,
 }: {
   yarns: Yarn[];
   materials: string[];
-  initialSearch?: string;
+  canManage?: boolean;
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+  filters: Filters;
 }) {
   const router = useRouter();
-  const [search, setSearch] = useState(initialSearch);
-  const [material, setMaterial] = useState<string>(ALL);
-  const [color, setColor] = useState("");
-  const [location, setLocation] = useState("");
+  const [pending, startTransition] = useTransition();
 
-  const [sortKey, setSortKey] = useState<SortKey>("name");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const [page, setPage] = useState(1);
+  // Local state for the text inputs so typing is responsive; URL is the source
+  // of truth and the server does the actual filtering/paging.
+  const [q, setQ] = useState(filters.q);
+  const [color, setColor] = useState(filters.color);
+  const [location, setLocation] = useState(filters.location);
 
   const [addOpen, setAddOpen] = useState(false);
   const [stock, setStock] = useState<{ yarn: Yarn; type: "IN" | "OUT" } | null>(
     null
   );
 
-  const filtered = useMemo(() => {
-    const s = search.trim().toLowerCase();
-    const c = color.trim().toLowerCase();
-    const l = location.trim().toLowerCase();
-    const rows = yarns.filter(
-      (y) =>
-        (!s || y.name.toLowerCase().includes(s) || y.yarnId.toLowerCase().includes(s)) &&
-        (material === ALL || y.material === material) &&
-        (!c || y.color.toLowerCase().includes(c)) &&
-        (!l || y.location.toLowerCase().includes(l))
-    );
-    rows.sort((a, b) => {
-      const dir = sortDir === "asc" ? 1 : -1;
-      if (sortKey === "quantity") return (a.quantity - b.quantity) * dir;
-      return a.name.localeCompare(b.name) * dir;
-    });
-    return rows;
-  }, [yarns, search, material, color, location, sortKey, sortDir]);
+  function buildHref(
+    over: Partial<Filters & { page: number }> = {}
+  ): string {
+    const f = {
+      q,
+      color,
+      location,
+      material: filters.material,
+      sort: filters.sort,
+      dir: filters.dir,
+      page: 1,
+      ...over,
+    };
+    const p = new URLSearchParams();
+    if (f.q) p.set("q", f.q);
+    if (f.material) p.set("material", f.material);
+    if (f.color) p.set("color", f.color);
+    if (f.location) p.set("location", f.location);
+    if (f.sort && f.sort !== "yarnId") p.set("sort", f.sort);
+    if (f.dir && f.dir !== "asc") p.set("dir", f.dir);
+    if (f.page && f.page > 1) p.set("page", String(f.page));
+    const qs = p.toString();
+    return qs ? `/inventory?${qs}` : "/inventory";
+  }
 
-  // Reset to first page whenever the result set changes.
-  useEffect(() => setPage(1), [search, material, color, location, sortKey, sortDir]);
+  const go = (over: Partial<Filters & { page: number }>) =>
+    startTransition(() => router.push(buildHref(over)));
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const current = Math.min(page, totalPages);
-  const start = (current - 1) * PAGE_SIZE;
-  const pageRows = filtered.slice(start, start + PAGE_SIZE);
+  // Debounce text fields → URL.
+  useEffect(() => {
+    if (
+      q === filters.q &&
+      color === filters.color &&
+      location === filters.location
+    ) {
+      return;
+    }
+    const t = setTimeout(() => go({ page: 1 }), 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, color, location]);
 
   function toggleSort(key: SortKey) {
-    if (key === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
+    const dir =
+      filters.sort === key && filters.dir === "asc" ? "desc" : "asc";
+    go({ sort: key, dir, page: 1 });
   }
 
   async function handleDelete(y: Yarn) {
     if (!confirm(`Delete ${y.name} (${y.yarnId})? This cannot be undone.`)) return;
-    const res = await fetch(`/api/yarns/${y.id}`, { method: "DELETE" });
-    const data = await res.json();
-    if (!res.ok) {
-      toast.error(data.error ?? "Could not delete yarn");
-      return;
+    try {
+      const res = await fetch(`/api/yarns/${y.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Could not delete yarn");
+        return;
+      }
+      toast.success("Yarn deleted");
+      router.refresh();
+    } catch {
+      toast.error("Could not reach the server — please retry");
     }
-    toast.success("Yarn deleted");
-    router.refresh();
   }
 
   const SortIcon = ({ active }: { active: boolean }) =>
     active ? (
-      sortDir === "asc" ? (
+      filters.dir === "asc" ? (
         <ArrowUp className="h-3.5 w-3.5" />
       ) : (
         <ArrowDown className="h-3.5 w-3.5" />
@@ -140,19 +174,24 @@ export function YarnTable({
       <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />
     );
 
+  const start = total === 0 ? 0 : (page - 1) * pageSize;
+
   return (
-    <div className="space-y-4">
+    <div className={cn("space-y-4", pending && "opacity-70 transition-opacity")}>
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative min-w-56 flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="pl-9"
-            placeholder="Search by name or ID…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name, ID, color, supplier…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
           />
         </div>
-        <Select value={material} onValueChange={setMaterial}>
+        <Select
+          value={filters.material || ALL}
+          onValueChange={(v) => go({ material: v === ALL ? "" : v, page: 1 })}
+        >
           <SelectTrigger className="w-44">
             <SelectValue placeholder="Material" />
           </SelectTrigger>
@@ -178,19 +217,21 @@ export function YarnTable({
           onChange={(e) => setLocation(e.target.value)}
         />
 
-        <Dialog open={addOpen} onOpenChange={setAddOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4" /> Add Yarn
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Add new yarn</DialogTitle>
-            </DialogHeader>
-            <YarnForm onDone={() => setAddOpen(false)} />
-          </DialogContent>
-        </Dialog>
+        {canManage && (
+          <Dialog open={addOpen} onOpenChange={setAddOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4" /> Add Yarn
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Add new yarn</DialogTitle>
+              </DialogHeader>
+              <YarnForm onDone={() => setAddOpen(false)} />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="overflow-hidden rounded-xl border bg-card shadow-card">
@@ -203,7 +244,7 @@ export function YarnTable({
                   onClick={() => toggleSort("name")}
                   className="inline-flex items-center gap-1 hover:text-foreground"
                 >
-                  Name <SortIcon active={sortKey === "name"} />
+                  Name <SortIcon active={filters.sort === "name"} />
                 </button>
               </TableHead>
               <TableHead>Material</TableHead>
@@ -213,7 +254,7 @@ export function YarnTable({
                   onClick={() => toggleSort("quantity")}
                   className="ml-auto inline-flex items-center gap-1 hover:text-foreground"
                 >
-                  Qty <SortIcon active={sortKey === "quantity"} />
+                  Qty <SortIcon active={filters.sort === "quantity"} />
                 </button>
               </TableHead>
               <TableHead>Location</TableHead>
@@ -222,14 +263,14 @@ export function YarnTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {pageRows.length === 0 ? (
+            {yarns.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                   No yarns match your filters.
                 </TableCell>
               </TableRow>
             ) : (
-              pageRows.map((y) => (
+              yarns.map((y) => (
                 <TableRow key={y.id} className="odd:bg-muted/30">
                   <TableCell className="font-mono text-xs">{y.yarnId}</TableCell>
                   <TableCell className="font-medium">
@@ -264,19 +305,23 @@ export function YarnTable({
                       >
                         <ArrowUp className="h-4 w-4 text-red-600" />
                       </Button>
-                      <Button size="icon" variant="ghost" title="Edit" asChild>
-                        <Link href={`/inventory/${y.id}`}>
-                          <Pencil className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        title="Delete"
-                        onClick={() => handleDelete(y)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                      </Button>
+                      {canManage && (
+                        <>
+                          <Button size="icon" variant="ghost" title="Edit" asChild>
+                            <Link href={`/inventory/${y.id}`}>
+                              <Pencil className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            title="Delete"
+                            onClick={() => handleDelete(y)}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -289,28 +334,28 @@ export function YarnTable({
       {/* result count + pagination */}
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
         <span>
-          {filtered.length === 0
+          {total === 0
             ? "No results"
-            : `Showing ${start + 1}–${Math.min(start + PAGE_SIZE, filtered.length)} of ${filtered.length}`}
+            : `Showing ${start + 1}–${Math.min(start + pageSize, total)} of ${total}`}
         </span>
-        {totalPages > 1 && (
+        {pageCount > 1 && (
           <div className="flex items-center gap-2">
             <Button
               size="sm"
               variant="outline"
-              disabled={current <= 1}
-              onClick={() => setPage(current - 1)}
+              disabled={page <= 1 || pending}
+              onClick={() => go({ page: page - 1 })}
             >
               Previous
             </Button>
             <span className="tabular-nums">
-              Page {current} / {totalPages}
+              Page {page} / {pageCount}
             </span>
             <Button
               size="sm"
               variant="outline"
-              disabled={current >= totalPages}
-              onClick={() => setPage(current + 1)}
+              disabled={page >= pageCount || pending}
+              onClick={() => go({ page: page + 1 })}
             >
               Next
             </Button>

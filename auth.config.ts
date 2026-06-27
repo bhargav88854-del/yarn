@@ -14,6 +14,7 @@ const PROTECTED_PREFIXES = [
   "/api/yarns",
   "/api/transactions",
   "/api/reports",
+  "/api/chat",
 ];
 
 export const authConfig = {

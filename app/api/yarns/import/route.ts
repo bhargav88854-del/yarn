@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isAdmin } from "@/lib/auth-helpers";
 import { parseCsv } from "@/lib/csv";
 import { yarnInputSchema, type YarnInput } from "@/lib/validation";
 
@@ -10,6 +11,13 @@ const REQUIRED = ["name", "material", "color", "quantity", "location", "supplier
 // the file (e.g. from export) is ignored — import always adds new rows.
 export async function POST(req: NextRequest) {
   try {
+    if (!(await isAdmin())) {
+      return NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json().catch(() => null);
     const csv = body?.csv;
     if (typeof csv !== "string" || csv.trim() === "") {

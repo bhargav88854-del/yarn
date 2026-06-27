@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Upload, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function CsvTools() {
+export function CsvTools({ canImport = false }: { canImport?: boolean }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -59,13 +59,15 @@ export function CsvTools() {
         className="hidden"
         onChange={onFile}
       />
-      <Button
-        variant="outline"
-        disabled={busy}
-        onClick={() => fileRef.current?.click()}
-      >
-        <Upload className="h-4 w-4" /> {busy ? "Importing…" : "Import CSV"}
-      </Button>
+      {canImport && (
+        <Button
+          variant="outline"
+          disabled={busy}
+          onClick={() => fileRef.current?.click()}
+        >
+          <Upload className="h-4 w-4" /> {busy ? "Importing…" : "Import CSV"}
+        </Button>
+      )}
       <Button variant="outline" asChild>
         <a href="/api/yarns/export">
           <Download className="h-4 w-4" /> Inventory

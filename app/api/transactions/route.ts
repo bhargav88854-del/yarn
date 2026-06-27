@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
 import { transactionInputSchema } from "@/lib/validation";
 
 // GET /api/transactions — movement log with yarn name
@@ -29,7 +30,11 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    const { yarnId, type, quantity } = parsed.data;
+    const { yarnId, type, quantity, note, reference } = parsed.data;
+
+    // Stamp who logged the movement (null if somehow unauthenticated).
+    const session = await auth();
+    const userId = session?.user?.id ? Number(session.user.id) : undefined;
 
     const result = await prisma.$transaction(async (tx) => {
       const yarn = await tx.yarn.findUnique({ where: { id: yarnId } });
@@ -47,7 +52,7 @@ export async function POST(req: NextRequest) {
       });
 
       return tx.transaction.create({
-        data: { yarnId, type, quantity },
+        data: { yarnId, type, quantity, note, reference, userId },
       });
     });
 

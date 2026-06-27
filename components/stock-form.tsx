@@ -19,6 +19,8 @@ export function StockForm({
 }) {
   const router = useRouter();
   const [quantity, setQuantity] = useState("");
+  const [reference, setReference] = useState("");
+  const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -35,7 +37,13 @@ export function StockForm({
       const res = await fetch("/api/transactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ yarnId: yarnPk, type, quantity: qty }),
+        body: JSON.stringify({
+          yarnId: yarnPk,
+          type,
+          quantity: qty,
+          reference,
+          note,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -44,6 +52,8 @@ export function StockForm({
       }
       toast.success(`Stock ${type}: ${qty} cones recorded`);
       setQuantity("");
+      setReference("");
+      setNote("");
       onDone?.();
       router.refresh();
     } catch {
@@ -76,6 +86,24 @@ export function StockForm({
           required
         />
         {error && <p className="text-xs text-destructive">{error}</p>}
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="reference">Reference (optional)</Label>
+        <Input
+          id="reference"
+          placeholder="PO / invoice no."
+          value={reference}
+          onChange={(e) => setReference(e.target.value)}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="note">Note (optional)</Label>
+        <Input
+          id="note"
+          placeholder="Reason for movement"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
       </div>
       <div className="flex justify-end">
         <Button type="submit" disabled={saving}>

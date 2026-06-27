@@ -30,19 +30,24 @@ model Yarn {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique
+  id           Int           @id @default(autoincrement())
+  email        String        @unique
   name         String
   passwordHash String
-  role         String   @default("staff") // staff | admin
-  createdAt    DateTime @default(now())
+  role         String        @default("staff") // staff | admin
+  createdAt    DateTime      @default(now())
+  transactions Transaction[]
 }
 
 model Transaction {
-  id       Int      @id @default(autoincrement())
-  yarnId   Int
-  type     String // IN or OUT
-  quantity Int
-  date     DateTime @default(now())
-  yarn     Yarn     @relation(fields: [yarnId], references: [id])
+  id        Int      @id @default(autoincrement())
+  yarnId    Int
+  type      String // IN or OUT
+  quantity  Int
+  note      String? // free-text reason
+  reference String? // PO / invoice number
+  userId    Int? // who logged it (null for legacy/seed rows)
+  date      DateTime @default(now())
+  yarn      Yarn     @relation(fields: [yarnId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id])
 }

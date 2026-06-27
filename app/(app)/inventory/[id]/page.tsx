@@ -21,7 +21,12 @@ export default async function YarnDetailPage({
 
   const yarn = await prisma.yarn.findUnique({
     where: { id },
-    include: { transactions: { orderBy: { date: "desc" } } },
+    include: {
+      transactions: {
+        orderBy: { date: "desc" },
+        include: { user: { select: { name: true } } },
+      },
+    },
   });
   if (!yarn) notFound();
 
@@ -78,25 +83,36 @@ export default async function YarnDetailPage({
             ) : (
               <ul className="divide-y">
                 {yarn.transactions.map((t) => (
-                  <li
-                    key={t.id}
-                    className="flex items-center justify-between py-2.5"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        className={
-                          (t.type === "IN"
-                            ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-                            : "bg-red-100 text-red-700 border-red-200") + " border"
-                        }
-                      >
-                        {t.type}
-                      </Badge>
-                      <span className="text-sm">{t.quantity} cones</span>
+                  <li key={t.id} className="py-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          className={
+                            (t.type === "IN"
+                              ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                              : "bg-red-100 text-red-700 border-red-200") + " border"
+                          }
+                        >
+                          {t.type}
+                        </Badge>
+                        <span className="text-sm">{t.quantity} cones</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDate(t.date)}
+                      </span>
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDate(t.date)}
-                    </span>
+                    {(t.reference || t.note || t.user) && (
+                      <p className="mt-1 pl-0.5 text-xs text-muted-foreground">
+                        {t.reference && (
+                          <span className="font-mono">{t.reference}</span>
+                        )}
+                        {t.reference && t.note && " · "}
+                        {t.note}
+                        {t.user && (
+                          <span className="italic"> — {t.user.name}</span>
+                        )}
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>

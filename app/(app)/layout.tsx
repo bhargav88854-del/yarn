@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { Sidebar } from "@/components/sidebar";
 import { MobileNav } from "@/components/mobile-nav";
+import { ChatWidget } from "@/components/chat-widget";
 
 export default async function AppLayout({
   children,
@@ -20,6 +21,7 @@ export default async function AppLayout({
         <MobileNav userName={userName} />
         <main className="min-w-0 flex-1">{children}</main>
       </div>
+      <ChatWidget />
     </div>
   );
 }

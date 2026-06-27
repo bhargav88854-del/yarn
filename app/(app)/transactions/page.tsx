@@ -21,7 +21,10 @@ export const metadata = {
 
 export default async function TransactionsPage() {
   const txns = await prisma.transaction.findMany({
-    include: { yarn: { select: { id: true, yarnId: true, name: true } } },
+    include: {
+      yarn: { select: { id: true, yarnId: true, name: true } },
+      user: { select: { name: true } },
+    },
     orderBy: [{ date: "desc" }, { id: "desc" }],
   });
 
@@ -41,12 +44,14 @@ export default async function TransactionsPage() {
                 <TableHead>Yarn</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead className="text-right">Quantity</TableHead>
+                <TableHead>Reference / Note</TableHead>
+                <TableHead>Logged by</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {txns.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                     No transactions yet.
                   </TableCell>
                 </TableRow>
@@ -77,6 +82,23 @@ export default async function TransactionsPage() {
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
                       {t.quantity}
+                    </TableCell>
+                    <TableCell className="max-w-[16rem]">
+                      {t.reference && (
+                        <span className="font-mono text-xs">{t.reference}</span>
+                      )}
+                      {t.reference && t.note && (
+                        <span className="text-muted-foreground"> · </span>
+                      )}
+                      {t.note && (
+                        <span className="text-muted-foreground">{t.note}</span>
+                      )}
+                      {!t.reference && !t.note && (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {t.user?.name ?? "—"}
                     </TableCell>
                   </TableRow>
                 ))

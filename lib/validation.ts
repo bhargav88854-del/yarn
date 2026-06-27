@@ -35,6 +35,14 @@ export const transactionInputSchema = z.object({
   yarnId: z.coerce.number().int().positive("Yarn is required"),
   type: z.enum(["IN", "OUT"]),
   quantity: z.coerce.number().int().positive("Quantity must be greater than 0"),
+  note: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    z.string().max(200, "Note is too long").optional()
+  ),
+  reference: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    z.string().max(60, "Reference is too long").optional()
+  ),
 });
 
 export type TransactionInput = z.infer<typeof transactionInputSchema>;

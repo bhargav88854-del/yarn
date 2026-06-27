@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isAdmin } from "@/lib/auth-helpers";
 import { yarnInputSchema, type YarnInput } from "@/lib/validation";
 
 // GET /api/yarns — list with optional filters: name, color, material, location
@@ -69,9 +70,16 @@ async function createYarnWithId(data: YarnInput) {
   throw new Error("YARN_ID_CONFLICT");
 }
 
-// POST /api/yarns — create a yarn with an auto-generated yarnId
+// POST /api/yarns — create a yarn with an auto-generated yarnId (admin only)
 export async function POST(req: NextRequest) {
   try {
+    if (!(await isAdmin())) {
+      return NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const parsed = yarnInputSchema.safeParse(body);
     if (!parsed.success) {

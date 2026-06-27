@@ -29,13 +29,21 @@ async function main() {
   await prisma.yarn.deleteMany();
   await prisma.user.deleteMany();
 
-  // Default admin login. Change the password after first sign-in.
+  // Default logins. Change the passwords after first sign-in.
   await prisma.user.create({
     data: {
       email: "admin@gmail.com",
       name: "Warehouse Admin",
       role: "admin",
       passwordHash: await hashPassword("admin123"),
+    },
+  });
+  await prisma.user.create({
+    data: {
+      email: "staff@gmail.com",
+      name: "Warehouse Staff",
+      role: "staff",
+      passwordHash: await hashPassword("staff123"),
     },
   });
 
@@ -58,6 +66,7 @@ async function main() {
   const count = await prisma.yarn.count();
   console.log(`Seeded ${count} yarns with sample transactions.`);
   console.log("Admin login: admin@gmail.com / admin123");
+  console.log("Staff login: staff@gmail.com / staff123");
 }
 
 main()
