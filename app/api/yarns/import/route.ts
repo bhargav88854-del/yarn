@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isAdmin } from "@/lib/auth-helpers";
+import { requireAdmin } from "@/lib/auth-helpers";
+import { maxYarnNumber, formatYarnId, isUniqueViolation } from "@/lib/yarns";
 import { parseCsv } from "@/lib/csv";
 import { yarnInputSchema, type YarnInput } from "@/lib/validation";
 
@@ -11,12 +12,8 @@ const REQUIRED = ["name", "material", "color", "quantity", "location", "supplier
 // the file (e.g. from export) is ignored — import always adds new rows.
 export async function POST(req: NextRequest) {
   try {
-    if (!(await isAdmin())) {
-      return NextResponse.json(
-        { error: "Admin access required" },
-        { status: 403 }
-      );
-    }
+    const denied = await requireAdmin();
+    if (denied) return denied;
 
     const body = await req.json().catch(() => null);
     const csv = body?.csv;
@@ -64,20 +61,21 @@ export async function POST(req: NextRequest) {
 
     let created = 0;
     if (valid.length > 0) {
-      // Allocate yarnIds sequentially from the current max in one shot.
-      const existing = await prisma.yarn.findMany({ select: { yarnId: true } });
-      let maxNum = existing.reduce((m, r) => {
-        const n = parseInt(r.yarnId.slice(1), 10);
-        return Number.isFinite(n) && n > m ? n : m;
-      }, 0);
-
-      const data = valid.map((v) => ({
-        ...v,
-        yarnId: `Y${String(++maxNum).padStart(3, "0")}`,
-      }));
-
-      const result = await prisma.yarn.createMany({ data });
-      created = result.count;
+      // Allocate yarnIds sequentially from the current max. A concurrent create
+      // (single POST or another import) can take the same range, so retry the
+      // whole batch on a unique-constraint collision rather than losing it.
+      for (let attempt = 0; attempt < 6; attempt++) {
+        let maxNum = await maxYarnNumber();
+        const data = valid.map((v) => ({ ...v, yarnId: formatYarnId(++maxNum) }));
+        try {
+          const result = await prisma.yarn.createMany({ data });
+          created = result.count;
+          break;
+        } catch (e) {
+          if (isUniqueViolation(e) && attempt < 5) continue;
+          throw e;
+        }
+      }
     }
 
     return NextResponse.json({

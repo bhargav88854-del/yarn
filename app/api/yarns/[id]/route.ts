@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isAdmin } from "@/lib/auth-helpers";
+import { requireAdmin } from "@/lib/auth-helpers";
 import { yarnUpdateSchema } from "@/lib/validation";
-
-const adminOnly = () =>
-  NextResponse.json({ error: "Admin access required" }, { status: 403 });
 
 type Params = { params: { id: string } };
 
@@ -30,7 +27,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
 // and the movement log never drift apart.
 export async function PUT(req: NextRequest, { params }: Params) {
   try {
-    if (!(await isAdmin())) return adminOnly();
+    const denied = await requireAdmin();
+    if (denied) return denied;
 
     const id = Number(params.id);
     const body = await req.json();
@@ -55,7 +53,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
 // DELETE /api/yarns/[id] — blocked when transactions exist
 export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
-    if (!(await isAdmin())) return adminOnly();
+    const denied = await requireAdmin();
+    if (denied) return denied;
 
     const id = Number(params.id);
     const txnCount = await prisma.transaction.count({ where: { yarnId: id } });

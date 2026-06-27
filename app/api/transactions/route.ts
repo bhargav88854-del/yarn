@@ -32,9 +32,10 @@ export async function POST(req: NextRequest) {
     }
     const { yarnId, type, quantity, note, reference } = parsed.data;
 
-    // Stamp who logged the movement (null if somehow unauthenticated).
+    // Stamp who logged the movement (null if unauthenticated or non-numeric id).
     const session = await auth();
-    const userId = session?.user?.id ? Number(session.user.id) : undefined;
+    const parsedUserId = Number(session?.user?.id);
+    const userId = Number.isInteger(parsedUserId) ? parsedUserId : undefined;
 
     const result = await prisma.$transaction(async (tx) => {
       const yarn = await tx.yarn.findUnique({ where: { id: yarnId } });

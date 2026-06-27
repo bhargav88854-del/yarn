@@ -57,14 +57,8 @@ export default async function InventoryPage({
     ],
   };
 
-  const [total, yarns, allMaterials, admin] = await Promise.all([
+  const [total, allMaterials, admin] = await Promise.all([
     prisma.yarn.count({ where }),
-    prisma.yarn.findMany({
-      where,
-      orderBy: { [sort]: dir },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-    }),
     prisma.yarn.findMany({
       distinct: ["material"],
       select: { material: true },
@@ -74,6 +68,17 @@ export default async function InventoryPage({
   ]);
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  // Clamp so a stale/shared ?page beyond the result set doesn't show an empty
+  // table with a "Showing 41–50 of 12" footer.
+  const safePage = Math.min(page, pageCount);
+
+  const yarns = await prisma.yarn.findMany({
+    where,
+    orderBy: { [sort]: dir },
+    skip: (safePage - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
+  });
+
   const materials = allMaterials.map((m) => m.material);
 
   return (
@@ -90,7 +95,7 @@ export default async function InventoryPage({
           materials={materials}
           canManage={admin}
           total={total}
-          page={page}
+          page={safePage}
           pageSize={PAGE_SIZE}
           pageCount={pageCount}
           filters={{ q, material, color, location, sort, dir }}

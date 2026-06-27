@@ -68,15 +68,17 @@ export async function POST(req: NextRequest) {
       "If something isn't in the snapshot, say so.\n\nINVENTORY SNAPSHOT:\n" +
       context;
 
-    const contents = [
-      ...history
-        .filter((t) => t && typeof t.text === "string")
-        .map((t) => ({
-          role: t.role === "model" ? "model" : "user",
-          parts: [{ text: t.text }],
-        })),
-      { role: "user", parts: [{ text: message }] },
-    ];
+    const mapped = history
+      .filter((t) => t && typeof t.text === "string")
+      .map((t) => ({
+        role: t.role === "model" ? "model" : "user",
+        parts: [{ text: t.text }],
+      }));
+    // Gemini requires the first content to have role "user"; a sliced history
+    // can begin on a model turn, which the API rejects with 400.
+    while (mapped.length && mapped[0].role === "model") mapped.shift();
+
+    const contents = [...mapped, { role: "user", parts: [{ text: message }] }];
 
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isAdmin } from "@/lib/auth-helpers";
+import { requireAdmin } from "@/lib/auth-helpers";
+import { maxYarnNumber, formatYarnId, isUniqueViolation } from "@/lib/yarns";
 import { yarnInputSchema, type YarnInput } from "@/lib/validation";
 
 // GET /api/yarns — list with optional filters: name, color, material, location
@@ -38,20 +39,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function createYarnWithId(data: YarnInput) {
   for (let attempt = 0; attempt < 8; attempt++) {
     try {
-      // Numeric max, not lexicographic: ordering the String column "desc" would
-      // rank "Y999" above "Y1000", stalling id allocation past 999.
-      const rows = await prisma.yarn.findMany({ select: { yarnId: true } });
-      const maxNum = rows.reduce((m, r) => {
-        const n = parseInt(r.yarnId.slice(1), 10);
-        return Number.isFinite(n) && n > m ? n : m;
-      }, 0);
-      const yarnId = `Y${String(maxNum + 1).padStart(3, "0")}`;
-
+      const yarnId = formatYarnId((await maxYarnNumber()) + 1);
       return await prisma.yarn.create({ data: { ...data, yarnId } });
     } catch (e) {
-      // Duck-type on the error code rather than `instanceof`: under Next's dev
-      // bundler the generated client can load as a separate module instance, so
-      // `e instanceof Prisma.PrismaClientKnownRequestError` is unreliable.
       const code =
         typeof (e as { code?: unknown }).code === "string"
           ? (e as { code: string }).code
@@ -60,7 +50,7 @@ async function createYarnWithId(data: YarnInput) {
         code === "P2034" ||
         (e instanceof Error && /database is locked|SQLITE_BUSY/i.test(e.message));
 
-      if (code === "P2002" || isBusy) {
+      if (isUniqueViolation(e) || isBusy) {
         await sleep(25 * (attempt + 1)); // back off, then recompute and retry
         continue;
       }
@@ -73,12 +63,8 @@ async function createYarnWithId(data: YarnInput) {
 // POST /api/yarns — create a yarn with an auto-generated yarnId (admin only)
 export async function POST(req: NextRequest) {
   try {
-    if (!(await isAdmin())) {
-      return NextResponse.json(
-        { error: "Admin access required" },
-        { status: 403 }
-      );
-    }
+    const denied = await requireAdmin();
+    if (denied) return denied;
 
     const body = await req.json();
     const parsed = yarnInputSchema.safeParse(body);
