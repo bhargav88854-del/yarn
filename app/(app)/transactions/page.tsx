@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
+import { ArrowLeftRight } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -13,6 +14,10 @@ import {
 } from "@/components/ui/table";
 
 export const dynamic = "force-dynamic";
+export const metadata = {
+  title: "Transactions",
+  description: "Stock movement log",
+};
 
 export default async function TransactionsPage() {
   const txns = await prisma.transaction.findMany({
@@ -25,11 +30,12 @@ export default async function TransactionsPage() {
       <PageHeader
         title="Transactions"
         subtitle={`${txns.length} stock movement(s) logged`}
+        icon={<ArrowLeftRight className="h-5 w-5" />}
       />
-      <div className="p-8">
-        <div className="rounded-lg border bg-card">
+      <div className="animate-fade-in-up p-5 sm:p-8">
+        <div className="overflow-hidden rounded-xl border bg-card shadow-card">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-muted/50">
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>Yarn</TableHead>
@@ -46,8 +52,8 @@ export default async function TransactionsPage() {
                 </TableRow>
               ) : (
                 txns.map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell className="text-muted-foreground">
+                  <TableRow key={t.id} className="odd:bg-muted/30">
+                    <TableCell className="text-muted-foreground tabular-nums">
                       {formatDate(t.date)}
                     </TableCell>
                     <TableCell className="font-medium">
@@ -69,7 +75,9 @@ export default async function TransactionsPage() {
                         {t.type}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">{t.quantity}</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">
+                      {t.quantity}
+                    </TableCell>
                   </TableRow>
                 ))
               )}

@@ -8,6 +8,11 @@ export function cn(...inputs: ClassValue[]) {
 /** Low stock threshold in cones. */
 export const LOW_STOCK_THRESHOLD = 50;
 
+/** Format a number as Indian-rupee currency, e.g. 125000 -> "₹1,25,000". */
+export function formatINR(amount: number): string {
+  return `₹${Math.round(amount).toLocaleString("en-IN")}`;
+}
+
 /** Format a date as DD-MM-YYYY for display. */
 export function formatDate(date: Date | string): string {
   const d = typeof date === "string" ? new Date(date) : date;
@@ -24,16 +29,26 @@ export function nextYarnId(count: number): string {
 
 export type StockLevel = "low" | "medium" | "high";
 
-/** Stock level buckets: red <50, yellow <100, green otherwise. */
-export function stockLevel(quantity: number): StockLevel {
-  if (quantity < 50) return "low";
-  if (quantity < 100) return "medium";
+/**
+ * Stock level relative to a yarn's reorder level: red below it, amber below 2×,
+ * green otherwise. `reorderLevel` defaults to the legacy 50-cone threshold so
+ * callers that don't have a per-yarn level still work.
+ */
+export function stockLevel(
+  quantity: number,
+  reorderLevel: number = LOW_STOCK_THRESHOLD
+): StockLevel {
+  if (quantity < reorderLevel) return "low";
+  if (quantity < reorderLevel * 2) return "medium";
   return "high";
 }
 
 /** Tailwind classes for a stock-level badge. */
-export function stockBadgeClass(quantity: number): string {
-  const level = stockLevel(quantity);
+export function stockBadgeClass(
+  quantity: number,
+  reorderLevel: number = LOW_STOCK_THRESHOLD
+): string {
+  const level = stockLevel(quantity, reorderLevel);
   if (level === "low") return "bg-red-100 text-red-700 border-red-200";
   if (level === "medium") return "bg-amber-100 text-amber-700 border-amber-200";
   return "bg-emerald-100 text-emerald-700 border-emerald-200";

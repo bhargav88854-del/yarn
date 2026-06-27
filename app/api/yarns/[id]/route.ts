@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { yarnInputSchema } from "@/lib/validation";
+import { yarnUpdateSchema } from "@/lib/validation";
 
 type Params = { params: { id: string } };
 
@@ -21,12 +21,14 @@ export async function GET(_req: NextRequest, { params }: Params) {
   }
 }
 
-// PUT /api/yarns/[id]
+// PUT /api/yarns/[id] — edits details only. Quantity is intentionally NOT
+// accepted here: stock only moves through IN/OUT transactions, so the figure
+// and the movement log never drift apart.
 export async function PUT(req: NextRequest, { params }: Params) {
   try {
     const id = Number(params.id);
     const body = await req.json();
-    const parsed = yarnInputSchema.safeParse(body);
+    const parsed = yarnUpdateSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         { error: parsed.error.issues[0].message },

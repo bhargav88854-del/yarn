@@ -12,6 +12,7 @@ export type RackYarn = {
   yarnId: string;
   name: string;
   quantity: number;
+  reorderLevel: number;
   location: string;
 };
 
@@ -71,7 +72,7 @@ export function RackLayout({ racks }: { racks: Rack[] }) {
                       <span className="font-mono text-xs text-muted-foreground">
                         {y.location}
                       </span>
-                      <Badge className={stockBadgeClass(y.quantity) + " border"}>
+                      <Badge className={stockBadgeClass(y.quantity, y.reorderLevel) + " border"}>
                         {y.quantity}
                       </Badge>
                     </div>

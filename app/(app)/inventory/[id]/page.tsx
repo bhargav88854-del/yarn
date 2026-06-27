@@ -38,7 +38,7 @@ export default async function YarnDetailPage({
           </Button>
         }
       />
-      <div className="grid gap-6 p-8 lg:grid-cols-3">
+      <div className="grid animate-fade-in-up gap-6 p-5 sm:p-8 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-base">Edit yarn</CardTitle>
@@ -51,6 +51,9 @@ export default async function YarnDetailPage({
                 material: yarn.material,
                 color: yarn.color,
                 quantity: yarn.quantity,
+                unit: yarn.unit,
+                costPerCone: yarn.costPerCone,
+                reorderLevel: yarn.reorderLevel,
                 location: yarn.location,
                 supplier: yarn.supplier,
               }}
@@ -61,6 +64,13 @@ export default async function YarnDetailPage({
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Movement history</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Stock value:{" "}
+              <span className="font-medium text-foreground">
+                ₹{(yarn.quantity * yarn.costPerCone).toLocaleString("en-IN")}
+              </span>{" "}
+              · reorder at {yarn.reorderLevel} {yarn.unit.toLowerCase()}
+            </p>
           </CardHeader>
           <CardContent>
             {yarn.transactions.length === 0 ? (

@@ -21,7 +21,7 @@ export function LowStockAlert({ yarns }: { yarns: LowYarn[] }) {
       <CardContent>
         {yarns.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            All yarns are above the 50-cone threshold.
+            All yarns are above their reorder level.
           </p>
         ) : (
           <ul className="divide-y">

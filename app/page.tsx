@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { LOW_STOCK_THRESHOLD, rackGroup } from "@/lib/utils";
+import { rackGroup } from "@/lib/utils";
 import { LandingSearch } from "@/components/landing-search";
 
 export const dynamic = "force-dynamic";
@@ -14,13 +14,12 @@ const NAV = [
 ];
 
 export default async function LandingPage() {
-  const [agg, skuCount, lowCount, yarns] = await Promise.all([
-    prisma.yarn.aggregate({ _sum: { quantity: true } }),
-    prisma.yarn.count(),
-    prisma.yarn.count({ where: { quantity: { lt: LOW_STOCK_THRESHOLD } } }),
-    prisma.yarn.findMany({ select: { location: true } }),
-  ]);
-  const totalCones = agg._sum.quantity ?? 0;
+  const yarns = await prisma.yarn.findMany({
+    select: { location: true, quantity: true, reorderLevel: true },
+  });
+  const skuCount = yarns.length;
+  const totalCones = yarns.reduce((s, y) => s + y.quantity, 0);
+  const lowCount = yarns.filter((y) => y.quantity < y.reorderLevel).length;
   const rackCount = new Set(yarns.map((y) => rackGroup(y.location))).size;
 
   return (
@@ -59,7 +58,7 @@ export default async function LandingPage() {
         {/* hero */}
         <main className="flex flex-1 flex-col justify-center pb-24 pt-10">
           <div className="max-w-2xl">
-            <h1 className="text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl md:text-7xl">
+            <h1 className="font-display text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl md:text-7xl">
               Every cone,
               <br />
               accounted for.
@@ -100,6 +99,24 @@ export default async function LandingPage() {
                 Browse Inventory
               </Link>
             </div>
+          </div>
+
+          {/* feature row */}
+          <div className="mt-16 grid max-w-3xl gap-4 sm:grid-cols-3">
+            {[
+              { icon: "📋", title: "Track", body: "Every yarn, by rack and supplier." },
+              { icon: "🔄", title: "Move", body: "Log stock in and out, balance updates live." },
+              { icon: "📊", title: "Report", body: "Low-stock alerts and monthly usage." },
+            ].map((f) => (
+              <div
+                key={f.title}
+                className="rounded-xl border border-white/15 bg-white/5 p-4 backdrop-blur transition-colors hover:bg-white/10"
+              >
+                <div className="text-xl">{f.icon}</div>
+                <p className="mt-2 font-display font-semibold">{f.title}</p>
+                <p className="mt-1 text-sm text-white/70">{f.body}</p>
+              </div>
+            ))}
           </div>
         </main>
 

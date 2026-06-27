@@ -51,6 +51,12 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "var(--font-sans)", "sans-serif"],
+      },
+      boxShadow: {
+        card: "0 1px 2px -1px hsl(240 30% 20% / 0.08), 0 4px 12px -2px hsl(240 30% 20% / 0.06)",
+        "card-hover":
+          "0 2px 4px -1px hsl(240 30% 20% / 0.10), 0 12px 28px -6px hsl(246 60% 40% / 0.16)",
       },
       keyframes: {
         "accordion-down": {
@@ -61,10 +67,15 @@ const config: Config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "fade-in-up": {
+          from: { opacity: "0", transform: "translateY(8px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "fade-in-up": "fade-in-up 0.4s ease-out both",
       },
     },
   },

@@ -19,11 +19,23 @@ model Yarn {
   material     String
   color        String
   quantity     Int
+  unit         String        @default("Cones") // Cones, Kg, Boxes...
+  costPerCone  Float         @default(0) // unit cost for stock valuation
+  reorderLevel Int           @default(50) // per-yarn low-stock threshold
   location     String // Rack A-12
   supplier     String
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   transactions Transaction[]
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("staff") // staff | admin
+  createdAt    DateTime @default(now())
 }
 
 model Transaction {
