@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/page-header";
 import { YarnTable } from "@/components/yarn-table";
+import { CsvTools } from "@/components/csv-tools";
 import { Boxes } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,7 @@ export default async function InventoryPage({
         title="Inventory"
         subtitle={`${yarns.length} yarn types in stock`}
         icon={<Boxes className="h-5 w-5" />}
+        action={<CsvTools />}
       />
       <div className="animate-fade-in-up p-5 sm:p-8">
         <YarnTable
