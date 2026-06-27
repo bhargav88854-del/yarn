@@ -13,12 +13,13 @@ export async function GET(req: NextRequest) {
     const material = sp.get("material") ?? undefined;
     const location = sp.get("location") ?? undefined;
 
+    const ci = "insensitive" as const;
     const yarns = await prisma.yarn.findMany({
       where: {
-        name: name ? { contains: name } : undefined,
-        color: color ? { contains: color } : undefined,
+        name: name ? { contains: name, mode: ci } : undefined,
+        color: color ? { contains: color, mode: ci } : undefined,
         material: material ? { equals: material } : undefined,
-        location: location ? { contains: location } : undefined,
+        location: location ? { contains: location, mode: ci } : undefined,
       },
       orderBy: { yarnId: "asc" },
     });

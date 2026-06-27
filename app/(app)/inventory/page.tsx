@@ -38,22 +38,23 @@ export default async function InventoryPage({
   const dir = searchParams.dir === "desc" ? "desc" : "asc";
   const page = Math.max(1, Number(searchParams.page) || 1);
 
-  // SQLite LIKE (Prisma `contains`) is case-insensitive for ASCII by default.
+  // Postgres case-insensitive matching via mode: "insensitive".
+  const ci = "insensitive" as const;
   const where = {
     AND: [
       q
         ? {
             OR: [
-              { name: { contains: q } },
-              { yarnId: { contains: q } },
-              { color: { contains: q } },
-              { supplier: { contains: q } },
+              { name: { contains: q, mode: ci } },
+              { yarnId: { contains: q, mode: ci } },
+              { color: { contains: q, mode: ci } },
+              { supplier: { contains: q, mode: ci } },
             ],
           }
         : {},
       material ? { material } : {},
-      color ? { color: { contains: color } } : {},
-      location ? { location: { contains: location } } : {},
+      color ? { color: { contains: color, mode: ci } } : {},
+      location ? { location: { contains: location, mode: ci } } : {},
     ],
   };
 
