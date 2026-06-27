@@ -5,7 +5,7 @@ import { formatINR } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-const MODEL = process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
+const MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 
 type ChatTurn = { role: "user" | "model"; text: string };
 
@@ -96,6 +96,14 @@ export async function POST(req: NextRequest) {
     if (!res.ok) {
       const detail = await res.text();
       console.error("Gemini error", res.status, detail.slice(0, 300));
+      if (res.status === 429) {
+        return NextResponse.json(
+          {
+            error: `Gemini quota exceeded for model "${MODEL}". Try again later, set GEMINI_MODEL to a model your key has quota for, or enable billing.`,
+          },
+          { status: 429 }
+        );
+      }
       return NextResponse.json(
         { error: "The assistant is unavailable right now" },
         { status: 502 }
