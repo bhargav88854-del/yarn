@@ -14,8 +14,8 @@ import {
 type Point = { material: string; value: number; quantity: number };
 
 const COLORS = [
+  "#059669",
   "#6366f1",
-  "#10b981",
   "#f59e0b",
   "#ef4444",
   "#0ea5e9",

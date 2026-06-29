@@ -23,11 +23,11 @@ export default async function LandingPage() {
   const rackCount = new Set(yarns.map((y) => rackGroup(y.location))).size;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#1b1448] text-white">
+    <div className="relative min-h-screen overflow-hidden bg-[#06251d] text-white">
       {/* cosmic backdrop */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_15%,rgba(124,77,255,0.45),transparent_55%),radial-gradient(ellipse_at_80%_85%,rgba(255,141,84,0.40),transparent_55%),radial-gradient(circle_at_60%_45%,rgba(64,42,140,0.55),transparent_60%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_15%,rgba(16,185,129,0.45),transparent_55%),radial-gradient(ellipse_at_80%_85%,rgba(255,141,84,0.38),transparent_55%),radial-gradient(circle_at_60%_45%,rgba(13,148,136,0.50),transparent_60%)]" />
       <div className="pointer-events-none absolute inset-0 [background-image:radial-gradient(rgba(255,255,255,0.5)_1px,transparent_1px)] [background-size:40px_40px] opacity-[0.12]" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#120d33] to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#031b15] to-transparent" />
 
       <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col px-6">
         {/* nav */}
@@ -88,7 +88,7 @@ export default async function LandingPage() {
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="/dashboard"
-                className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#1b1448] transition-transform hover:-translate-y-0.5"
+                className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#06251d] transition-transform hover:-translate-y-0.5"
               >
                 Open Dashboard
               </Link>
